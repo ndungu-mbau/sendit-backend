@@ -1,33 +1,57 @@
 from flask import current_app
-from models import db, Item
+from models import db, User, Order, Item
 
-def seed_items():
+def seed_data():
     # Sample data to seed into the database
-    items_data = [
+    users_data = [
         {
-            'item_name': 'Keyboard',
-            'description': 'Mechanical keyboard with RGB lighting.',
-            'price': 99.99,
-            'order_id': 1
+            'username': 'user1',
+            'email': 'user1@example.com',
+            'password': 'password1',
+            'role': 'user'
         },
         {
-            'item_name': 'Mouse',
-            'description': 'Wireless gaming mouse with adjustable DPI.',
-            'price': 49.99,
-            'order_id': 2
-        },
-        # Add more items as needed
+            'username': 'user2',
+            'email': 'user2@example.com',
+            'password': 'password2',
+            'role': 'admin'
+        }
     ]
 
-    # Create instances of Item and add them to the session
-    for item_info in items_data:
-        item = Item(
-            item_name=item_info['item_name'],
-            description=item_info['description'],
-            price=item_info['price'],
-            order_id=item_info['order_id']
+    orders_data = [
+        {
+            'pickup_address': 'Address 1',
+            'delivery_address': 'Address 2',
+            'status': 'pending',
+            'user_id': 1  # User ID for user1
+        },
+        {
+            'pickup_address': 'Address 3',
+            'delivery_address': 'Address 4',
+            'status': 'completed',
+            'user_id': 2  # User ID for user2
+        }
+    ]
+
+    # Create instances of User and add them to the session
+    for user_info in users_data:
+        user = User(
+            username=user_info['username'],
+            email=user_info['email'],
+            password=user_info['password'],
+            role=user_info['role']
         )
-        db.session.add(item)
+        db.session.add(user)
+
+    # Create instances of Order and add them to the session
+    for order_info in orders_data:
+        order = Order(
+            pickup_address=order_info['pickup_address'],
+            delivery_address=order_info['delivery_address'],
+            status=order_info['status'],
+            user_id=order_info['user_id']
+        )
+        db.session.add(order)
 
     # Commit all changes to the database
     db.session.commit()
@@ -36,5 +60,5 @@ if __name__ == '__main__':
     with current_app.app_context():
         # Ensure the database tables are created before seeding
         db.create_all()
-        # Seed items into the database
-        seed_items()
+        # Seed data into the database
+        seed_data()
