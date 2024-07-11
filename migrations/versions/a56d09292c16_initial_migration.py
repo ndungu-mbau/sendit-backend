@@ -1,8 +1,8 @@
-"""Initial migration.
+"""Initial migration
 
-Revision ID: 4e8fce380535
+Revision ID: a56d09292c16
 Revises: 
-Create Date: 2024-07-10 09:25:08.096100
+Create Date: 2024-07-11 10:34:53.032587
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '4e8fce380535'
+revision = 'a56d09292c16'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -33,7 +33,7 @@ def upgrade():
     sa.Column('delivery_address', sa.Text(), nullable=False),
     sa.Column('status', sa.String(length=50), nullable=True),
     sa.Column('user_id', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['user_id'], ['users.id'], name=op.f('fk_orders_user_id_users')),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('order_id')
     )
     op.create_table('feedback',
@@ -41,7 +41,7 @@ def upgrade():
     sa.Column('rating', sa.Integer(), nullable=False),
     sa.Column('comment', sa.Text(), nullable=False),
     sa.Column('order_id', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['order_id'], ['orders.order_id'], name=op.f('fk_feedback_order_id_orders')),
+    sa.ForeignKeyConstraint(['order_id'], ['orders.order_id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('items',
@@ -50,14 +50,14 @@ def upgrade():
     sa.Column('description', sa.Text(), nullable=False),
     sa.Column('price', sa.Integer(), nullable=False),
     sa.Column('order_id', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['order_id'], ['orders.order_id'], name=op.f('fk_items_order_id_orders')),
+    sa.ForeignKeyConstraint(['order_id'], ['orders.order_id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('order_item',
     sa.Column('order_id', sa.Integer(), nullable=False),
     sa.Column('item_id', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['item_id'], ['items.id'], name=op.f('fk_order_item_item_id_items')),
-    sa.ForeignKeyConstraint(['order_id'], ['orders.order_id'], name=op.f('fk_order_item_order_id_orders')),
+    sa.ForeignKeyConstraint(['item_id'], ['items.id'], ),
+    sa.ForeignKeyConstraint(['order_id'], ['orders.order_id'], ),
     sa.PrimaryKeyConstraint('order_id', 'item_id')
     )
     # ### end Alembic commands ###
