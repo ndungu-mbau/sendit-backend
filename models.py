@@ -9,9 +9,9 @@ class User(db.Model, SerializerMixin):
     email = db.Column(db.String(110), unique=True, nullable=False)
     password = db.Column(db.String(40), nullable=False)
     role = db.Column(db.String(50), nullable=False)
-
     orders = db.relationship('Order', backref='user', lazy=True)
 
+    # serialize_rules = ('-orders.user')
 
 class Order(db.Model, SerializerMixin):
     __tablename__ = 'orders'
@@ -24,13 +24,15 @@ class Order(db.Model, SerializerMixin):
     items = db.relationship('Item', backref='order', lazy=True)
     feedback = db.relationship('Feedback', backref='order', lazy=True)
 
+    # serialize_rules = ('-items.order','-feedback.orders')
+
 class Item(db.Model, SerializerMixin):
     __tablename__ = 'items'
     id = db.Column(db.Integer, primary_key=True)
     item_name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text, nullable=False)
     price = db.Column(db.Integer, nullable=False)
-    
+
 
     order_id = db.Column(db.Integer, db.ForeignKey('orders.order_id'), nullable=False)
 
