@@ -30,6 +30,8 @@ class Item(db.Model, SerializerMixin):
     item_name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text, nullable=False)
     price = db.Column(db.Integer, nullable=False)
+    
+
     order_id = db.Column(db.Integer, db.ForeignKey('orders.order_id'), nullable=False)
 
 class Feedback(db.Model, SerializerMixin):
