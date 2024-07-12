@@ -1,6 +1,7 @@
 from config import db
 from sqlalchemy_serializer import SerializerMixin
 
+
 class User(db.Model, SerializerMixin):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
@@ -10,6 +11,7 @@ class User(db.Model, SerializerMixin):
     role = db.Column(db.String(50), nullable=False)
 
     orders = db.relationship('Order', backref='user', lazy=True)
+
 
 class Order(db.Model, SerializerMixin):
     __tablename__ = 'orders'
