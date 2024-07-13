@@ -80,7 +80,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy_serializer import SerializerMixin
 from database import db
 
-# Association table 
+# Association table
 order_item_association = db.Table(
     'order_item_association',
     db.Model.metadata,
