@@ -1,13 +1,35 @@
+
 from faker import Faker
+
 from app import app, db
 from models import User, Order, Item, Feedback, order_item_association
 from sqlalchemy.exc import IntegrityError
+
 
 fake = Faker()
 
 def seed_data():
     with app.app_context():
         try:
+
+
+# Function to seed data
+def seed_data():
+    with app.app_context():
+        try:
+            # Reset the database
+            reset_database()
+
+            # Create sample users
+            user1 = User(username='john_doe', email='john@example.com', password='password123', role='admin')
+            user2 = User(username='jane_doe', email='jane@example.com', password='password123', role='user')
+            user3 = User(username='mercy_grace', email='mercy@example.com', password='password123', role='admin')
+
+            db.session.add(user1)
+            db.session.add(user2)
+            db.session.add(user3)
+            db.session.commit()
+
 
             User.query.delete()
             Order.query.delete()
@@ -40,6 +62,7 @@ def seed_data():
             db.session.commit()
 
 
+
             orders = []
             for user in users:
                 for _ in range(2):
@@ -68,6 +91,22 @@ def seed_data():
                 ))
 
             db.session.add_all(feedbacks)
+
+            # Associate items with orders
+            order1.items.append(item1)
+            order2.items.append(item2)
+            order3.items.append(item3)
+            db.session.commit()
+
+            # Create sample feedback
+            feedback1 = Feedback(rating=5, comment='Excellent service!', order_id=order1.order_id)
+            feedback2 = Feedback(rating=4, comment='Very good, but could be improved.', order_id=order2.order_id)
+            feedback3 = Feedback(rating=3, comment='Average experience.', order_id=order3.order_id)
+
+            db.session.add(feedback1)
+            db.session.add(feedback2)
+            db.session.add(feedback3)
+
             db.session.commit()
 
             print("Seed data inserted successfully.")
