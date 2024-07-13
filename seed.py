@@ -102,6 +102,12 @@ def seed_data():
             db.session.add(order3)
             db.session.commit()
 
+
+            order1.items.append(item1)
+            order2.items.append(item2)
+            order3.items.append(item3)
+            order3.serializable_keys
+            db.session.commit()
             # Create sample feedback
             feedback1 = Feedback(rating=5, comment='Excellent service!', order_id=order1.order_id)
             feedback2 = Feedback(rating=4, comment='Very good, but could be improved.', order_id=order2.order_id)
