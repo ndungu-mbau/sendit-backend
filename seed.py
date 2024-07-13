@@ -1,122 +1,73 @@
-# from flask import current_app
-# from models import db, User, Order, Item
-
-# def seed_data():
-#     # Sample data to seed into the database
-#     users_data = [
-#         {
-#             'username': 'user1',
-#             'email': 'user1@example.com',
-#             'password': 'password1',
-#             'role': 'user'
-#         },
-#         {
-#             'username': 'user2',
-#             'email': 'user2@example.com',
-#             'password': 'password2',
-#             'role': 'admin'
-#         }
-#     ]
-
-#     orders_data = [
-#         {
-#             'pickup_address': 'Address 1',
-#             'delivery_address': 'Address 2',
-#             'status': 'pending',
-#             'user_id': 1  # User ID for user1
-#         },
-#         {
-#             'pickup_address': 'Address 3',
-#             'delivery_address': 'Address 4',
-#             'status': 'completed',
-#             'user_id': 2  # User ID for user2
-#         }
-#     ]
-
-#     # Create instances of User and add them to the session
-#     for user_info in users_data:
-#         user = User(
-#             username=user_info['username'],
-#             email=user_info['email'],
-#             password=user_info['password'],
-#             role=user_info['role']
-#         )
-#         db.session.add(user)
-
-#     # Create instances of Order and add them to the session
-#     for order_info in orders_data:
-#         order = Order(
-#             pickup_address=order_info['pickup_address'],
-#             delivery_address=order_info['delivery_address'],
-#             status=order_info['status'],
-#             user_id=order_info['user_id']
-#         )
-#         db.session.add(order)
-
-#     # Commit all changes to the database
-#     db.session.commit()
-
-# if __name__ == '__main__':
-#     with current_app.app_context():
-#         # Ensure the database tables are created before seeding
-#         db.create_all()
-#         # Seed data into the database
-#         seed_data()
-
-
+from faker import Faker
 from app import app, db
-from models import User, Order, Item, Feedback
+from models import User, Order, Item, Feedback, order_item_association
 from sqlalchemy.exc import IntegrityError
 
+fake = Faker()
 
 def seed_data():
     with app.app_context():
         try:
             
-            user1 = User(username='john_doe', email='john@example.com', password='password123', role='admin')
-            user2 = User(username='jane_doe', email='jane@example.com', password='password123', role='user')
-            user3 = User(username='mercy_grace', email='mercy@example.com', password='password123', role='admin')
+            User.query.delete()
+            Order.query.delete()
+            Item.query.delete()
+            Feedback.query.delete()
 
-            db.session.add(user1)
-            db.session.add(user2)
-            db.session.add(user3)
-            db.session.commit()
-
-        
-            item1 = Item(item_name='Laptop', description='A high-end laptop', price=1500)
-            item2 = Item(item_name='Smartphone', description='A latest model smartphone', price=800)
-            item3 = Item(item_name='Headphones', description='High-quality headphones', price=200)
-
-            db.session.add(item1)
-            db.session.add(item2)
-            db.session.add(item3)
+          
+            users = []
+            for _ in range(10):  
+                username = fake.user_name()
+                domain = fake.free_email_domain()
+                email = f"{username}@{domain}"
+                password = fake.password(length=12)  
+                role = fake.random_element(elements=['admin', 'user'])
+                users.append(User(username=username, email=email, password=password, role=role))
+            
+            db.session.add_all(users)
             db.session.commit()
 
             
-            order1 = Order(pickup_address='123 Main St', delivery_address='456 Elm St', user_id=user1.id)
-            order2 = Order(pickup_address='789 Oak St', delivery_address='101 Pine St', user_id=user2.id)
-            order3 = Order(pickup_address='345 Maple St', delivery_address='678 Cherry St', user_id=user3.id)
+            items = []
+            for _ in range(10): 
+                items.append(Item(
+                    item_name=fake.word(),
+                    description=fake.text(),
+                    price=fake.random_number(digits=3, fix_len=False)
+                ))
 
-            db.session.add(order1)
-            db.session.add(order2)
-            db.session.add(order3)
+            db.session.add_all(items)
             db.session.commit()
 
-
-            order1.items.append(item1)
-            order2.items.append(item2)
-            order3.items.append(item3)
-            order3.serializable_keys
-            db.session.commit()
             
+            orders = []
+            for user in users:
+                for _ in range(2): 
+                    order = Order(
+                        pickup_address=fake.address(),
+                        delivery_address=fake.address(),
+                        user_id=user.id
+                    )
+                    orders.append(order)
+                    db.session.add(order)
+                    
+                    # Adding items
+                    order_items = fake.random_elements(elements=[item.id for item in items], length=2, unique=True)
+                    for item_id in order_items:
+                        db.session.execute(order_item_association.insert().values(order_id=order.order_id, item_id=item_id))
 
-            feedback1 = Feedback(rating=5, comment='Excellent service!', order_id=order1.order_id)
-            feedback2 = Feedback(rating=4, comment='Very good, but could be improved.', order_id=order2.order_id)
-            feedback3 = Feedback(rating=3, comment='Average experience.', order_id=order3.order_id)
+            db.session.commit()
 
-            db.session.add(feedback1)
-            db.session.add(feedback2)
-            db.session.add(feedback3)
+            # Create Feedback
+            feedbacks = []
+            for order in orders:
+                feedbacks.append(Feedback(
+                    rating=fake.random_int(min=1, max=5),
+                    comment=fake.sentence(),
+                    order_id=order.order_id
+                ))
+
+            db.session.add_all(feedbacks)
             db.session.commit()
 
             print("Seed data inserted successfully.")
@@ -124,7 +75,6 @@ def seed_data():
         except IntegrityError as e:
             db.session.rollback()
             print(f"Error inserting seed data: {e}")
-
 
 if __name__ == '__main__':
     seed_data()
