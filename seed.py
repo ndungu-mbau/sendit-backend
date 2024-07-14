@@ -1,6 +1,16 @@
+
+from faker import Faker
+
 from app import app, db
-from models import User, Order, Item, Feedback
+from models import User, Order, Item, Feedback, order_item_association
 from sqlalchemy.exc import IntegrityError
+
+
+fake = Faker()
+
+def seed_data():
+    with app.app_context():
+        try:
 
 
 # Function to seed data
@@ -20,25 +30,67 @@ def seed_data():
             db.session.add(user3)
             db.session.commit()
 
-            # Create sample items
-            item1 = Item(item_name='Laptop', description='A high-end laptop', price=1500)
-            item2 = Item(item_name='Smartphone', description='A latest model smartphone', price=800)
-            item3 = Item(item_name='Headphones', description='High-quality headphones', price=200)
 
-            db.session.add(item1)
-            db.session.add(item2)
-            db.session.add(item3)
+            User.query.delete()
+            Order.query.delete()
+            Item.query.delete()
+            Feedback.query.delete()
+
+
+            users = []
+            for _ in range(10):
+                username = fake.user_name()
+                domain = fake.free_email_domain()
+                email = f"{username}@{domain}"
+                password = fake.password(length=12)
+                role = fake.random_element(elements=['admin', 'user'])
+                users.append(User(username=username, email=email, password=password, role=role))
+
+            db.session.add_all(users)
             db.session.commit()
 
-            # Create sample orders
-            order1 = Order(pickup_address='123 Main St', delivery_address='456 Elm St', user_id=user1.id)
-            order2 = Order(pickup_address='789 Oak St', delivery_address='101 Pine St', user_id=user2.id)
-            order3 = Order(pickup_address='345 Maple St', delivery_address='678 Cherry St', user_id=user3.id)
 
-            db.session.add(order1)
-            db.session.add(order2)
-            db.session.add(order3)
+            items = []
+            for _ in range(10):
+                items.append(Item(
+                    item_name=fake.word(),
+                    description=fake.text(),
+                    price=fake.random_number(digits=3, fix_len=False)
+                ))
+
+            db.session.add_all(items)
             db.session.commit()
+
+
+
+            orders = []
+            for user in users:
+                for _ in range(2):
+                    order = Order(
+                        pickup_address=fake.address(),
+                        delivery_address=fake.address(),
+                        user_id=user.id
+                    )
+                    orders.append(order)
+                    db.session.add(order)
+
+                    # Adding items
+                    order_items = fake.random_elements(elements=[item.id for item in items], length=2, unique=True)
+                    for item_id in order_items:
+                        db.session.execute(order_item_association.insert().values(order_id=order.order_id, item_id=item_id))
+
+            db.session.commit()
+
+            # Create Feedback
+            feedbacks = []
+            for order in orders:
+                feedbacks.append(Feedback(
+                    rating=fake.random_int(min=1, max=5),
+                    comment=fake.sentence(),
+                    order_id=order.order_id
+                ))
+
+            db.session.add_all(feedbacks)
 
             # Associate items with orders
             order1.items.append(item1)
@@ -54,6 +106,7 @@ def seed_data():
             db.session.add(feedback1)
             db.session.add(feedback2)
             db.session.add(feedback3)
+
             db.session.commit()
 
             print("Seed data inserted successfully.")
@@ -62,6 +115,5 @@ def seed_data():
             db.session.rollback()
             print(f"Error inserting seed data: {e}")
 
-# Run seed function
 if __name__ == '__main__':
     seed_data()

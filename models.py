@@ -3,8 +3,12 @@ from sqlalchemy.orm import relationship
 from sqlalchemy_serializer import SerializerMixin
 from database import db
 
+
+
+
 # Association table 
 order_item_association = Table(
+
     'order_item_association',
     db.Model.metadata,
     Column('order_id', Integer, ForeignKey('orders.order_id')),
