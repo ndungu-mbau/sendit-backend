@@ -98,7 +98,6 @@ class User(db.Model, SerializerMixin):
     orders = db.relationship('Order', backref='user', lazy=True)
 
     serialize_rules = ('-orders.user',)
-
     @db.validates('email')
     def validate_email(self, key, email):
         # Simple regex for validating an Email
