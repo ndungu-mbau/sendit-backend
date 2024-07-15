@@ -3,14 +3,17 @@ from flask_migrate import Migrate
 from flask_restful import Api, Resource
 
 from database import db
-from models import User, Order, Item, Feedback
-from flask_cors import CORS
+from models import User, Order, Parcel, Feedback
+# from flask_cors import CORS
 # Initialize the flask application
 app = Flask(__name__)
-CORS(app)
+
+
 # Configure the database
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# CORS(app)# allow requests from all origins
 
 migrate = Migrate(app, db)
 db.init_app(app)
