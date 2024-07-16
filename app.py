@@ -1,13 +1,12 @@
 from flask import Flask, make_response, request, jsonify
 from flask_migrate import Migrate
 from flask_restful import Api, Resource
-
 from database import db
-from models import User, Order, Item, Feedback
-from flask_cors import CORS
+from models import User, Order, Feedback, Parcel
+# from flask_cors import CORS
 # Initialize the flask application
 app = Flask(__name__)
-CORS(app)
+
 # Configure the database
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -112,50 +111,53 @@ class OrderByID(Resource):
 
 api.add_resource(OrderByID, '/orders/<int:id>')
 
-class Items(Resource):
+
+class Parcels(Resource):
     def get(self):
-        items = Item.query.all()
-        items_list = [item.to_dict() for item in items]
-        return make_response(jsonify({"count": len(items_list), "items": items_list}), 200)
+        parcels = Parcel.query.all()
+        parcels_list = [parcel.to_dict() for parcel in parcels]
+        return make_response(jsonify({"count": len(parcels_list), "parcels": parcels_list}), 200)
 
     def post(self):
-        new_item = Item(
-            item_name=request.json.get("item_name"),
-            description=request.json.get("description"),
+        new_parcel = Parcel(
+            pickup_location=request.json.get("pickup_location"),
+            destination=request.json.get("destination"),
+            user_id=request.json.get("user_id"),
+            weight=request.json.get("weight"),
             price=request.json.get("price"),
-            order_id=request.json.get("order_id")
+            description=request.json.get("description")
         )
-        db.session.add(new_item)
+        db.session.add(new_parcel)
         db.session.commit()
-        return make_response(jsonify(new_item.to_dict()), 201)
+        return make_response(jsonify(new_parcel.to_dict()), 201)
 
-api.add_resource(Items, '/items')
+api.add_resource(Parcels, '/parcels')
 
-class ItemByID(Resource):
+class ParcelByID(Resource):
     def get(self, id):
-        item = Item.query.get(id)
-        if item is None:
-            return make_response(jsonify({"message": "Item not found"}), 404)
-        return make_response(jsonify(item.to_dict()), 200)
+        parcel = Parcel.query.get(id)
+        if parcel is None:
+            return make_response(jsonify({"message": "Parcel not found"}), 404)
+        return make_response(jsonify(parcel.to_dict()), 200)
 
     def patch(self, id):
-        item = Item.query.get(id)
-        if item is None:
-            return make_response(jsonify({"message": "Item not found"}), 404)
+        parcel = Parcel.query.get(id)
+        if parcel is None:
+            return make_response(jsonify({"message": "Parcel not found"}), 404)
         for attr in request.json:
-            setattr(item, attr, request.json.get(attr))
+            setattr(parcel, attr, request.json.get(attr))
         db.session.commit()
-        return make_response(jsonify(item.to_dict()), 200)
+        return make_response(jsonify(parcel.to_dict()), 200)
 
     def delete(self, id):
-        item = Item.query.get(id)
-        if item is None:
-            return make_response(jsonify({"message": "Item not found"}), 404)
-        db.session.delete(item)
+        parcel = Parcel.query.get(id)
+        if parcel is None:
+            return make_response(jsonify({"message": "Parcel not found"}), 404)
+        db.session.delete(parcel)
         db.session.commit()
-        return make_response(jsonify({"message": "Item deleted"}), 200)
+        return make_response(jsonify({"message": "Parcel deleted"}), 200)
 
-api.add_resource(ItemByID, '/items/<int:id>')
+api.add_resource(ParcelByID, '/parcels/<int:id>')
 
 class Feedbacks(Resource):
     def get(self):
