@@ -1,30 +1,27 @@
 from flask import Flask, make_response, request, jsonify
 from flask_migrate import Migrate
 from flask_restful import Api, Resource
-
 from database import db
-from models import User, Order, Parcel, Feedback
-# from flask_cors import CORS
-# Initialize the flask application
+from models import User, Order, Feedback, Parcel, Profile
+
+
 app = Flask(__name__)
 
 
-# Configure the database
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-# CORS(app)# allow requests from all origins
 
 migrate = Migrate(app, db)
 db.init_app(app)
 
-
 api = Api(app)
+
 
 @app.route('/')
 def index():
     return "<h1>Welcome to the Parcel Pro App</h1>"
 
+# Routes for Users
 class Users(Resource):
     def get(self):
         users = User.query.all()
@@ -70,6 +67,7 @@ class UserByID(Resource):
 
 api.add_resource(UserByID, '/users/<int:id>')
 
+# Routes for Orders
 class Orders(Resource):
     def get(self):
         orders = Order.query.all()
@@ -115,51 +113,55 @@ class OrderByID(Resource):
 
 api.add_resource(OrderByID, '/orders/<int:id>')
 
-class Items(Resource):
+# Routes for Parcels
+class Parcels(Resource):
     def get(self):
-        items = Item.query.all()
-        items_list = [item.to_dict() for item in items]
-        return make_response(jsonify({"count": len(items_list), "items": items_list}), 200)
+        parcels = Parcel.query.all()
+        parcels_list = [parcel.to_dict() for parcel in parcels]
+        return make_response(jsonify({"count": len(parcels_list), "parcels": parcels_list}), 200)
 
     def post(self):
-        new_item = Item(
-            item_name=request.json.get("item_name"),
-            description=request.json.get("description"),
+        new_parcel = Parcel(
+            pickup_location=request.json.get("pickup_location"),
+            destination=request.json.get("destination"),
+            user_id=request.json.get("user_id"),
+            weight=request.json.get("weight"),
             price=request.json.get("price"),
-            order_id=request.json.get("order_id")
+            description=request.json.get("description")
         )
-        db.session.add(new_item)
+        db.session.add(new_parcel)
         db.session.commit()
-        return make_response(jsonify(new_item.to_dict()), 201)
+        return make_response(jsonify(new_parcel.to_dict()), 201)
 
-api.add_resource(Items, '/items')
+api.add_resource(Parcels, '/parcels')
 
-class ItemByID(Resource):
+class ParcelByID(Resource):
     def get(self, id):
-        item = Item.query.get(id)
-        if item is None:
-            return make_response(jsonify({"message": "Item not found"}), 404)
-        return make_response(jsonify(item.to_dict()), 200)
+        parcel = Parcel.query.get(id)
+        if parcel is None:
+            return make_response(jsonify({"message": "Parcel not found"}), 404)
+        return make_response(jsonify(parcel.to_dict()), 200)
 
     def patch(self, id):
-        item = Item.query.get(id)
-        if item is None:
-            return make_response(jsonify({"message": "Item not found"}), 404)
+        parcel = Parcel.query.get(id)
+        if parcel is None:
+            return make_response(jsonify({"message": "Parcel not found"}), 404)
         for attr in request.json:
-            setattr(item, attr, request.json.get(attr))
+            setattr(parcel, attr, request.json.get(attr))
         db.session.commit()
-        return make_response(jsonify(item.to_dict()), 200)
+        return make_response(jsonify(parcel.to_dict()), 200)
 
     def delete(self, id):
-        item = Item.query.get(id)
-        if item is None:
-            return make_response(jsonify({"message": "Item not found"}), 404)
-        db.session.delete(item)
+        parcel = Parcel.query.get(id)
+        if parcel is None:
+            return make_response(jsonify({"message": "Parcel not found"}), 404)
+        db.session.delete(parcel)
         db.session.commit()
-        return make_response(jsonify({"message": "Item deleted"}), 200)
+        return make_response(jsonify({"message": "Parcel deleted"}), 200)
 
-api.add_resource(ItemByID, '/items/<int:id>')
+api.add_resource(ParcelByID, '/parcels/<int:id>')
 
+# Routes for Feedback
 class Feedbacks(Resource):
     def get(self):
         feedbacks = Feedback.query.all()
@@ -203,6 +205,50 @@ class FeedbackByID(Resource):
         return make_response(jsonify({"message": "Feedback deleted"}), 200)
 
 api.add_resource(FeedbackByID, '/feedbacks/<int:id>')
+
+
+class Profiles(Resource):
+    def get(self):
+        profiles = Profile.query.all()
+        profiles_list = [profile.to_dict() for profile in profiles]
+        return make_response(jsonify({"count": len(profiles_list), "profiles": profiles_list}), 200)
+
+    def post(self):
+        new_profile = Profile(
+            profile_picture=request.json.get("profile_picture"),
+            location=request.json.get("location"),
+            user_id=request.json.get("user_id")
+        )
+        db.session.add(new_profile)
+        db.session.commit()
+        return make_response(jsonify(new_profile.to_dict()), 201)
+
+api.add_resource(Profiles, '/profiles')
+
+class ProfileByID(Resource):
+    def get(self, id):
+        profile = Profile.query.get(id)
+        if profile is None:
+            return make_response(jsonify({"message": "Profile not found"}), 404)
+        return make_response(jsonify(profile.to_dict()), 200)
+
+    def patch(self, id):
+        profile = Profile.query.get(id)
+        if profile is None:
+            return make_response(jsonify({"message": "Profile not found"}), 404)
+        for attr in request.json:
+            setattr(profile, attr, request.json.get(attr))
+        db.session.commit()
+        return make_response(jsonify(profile.to_dict()), 200)
+
+    def delete(self, id):
+        profile = Profile.query.get(id)
+        if profile is None:
+            return make_response(jsonify({"message": "Profile not found"}), 404)
+        db.session.delete(profile)
+        db.session.commit()
+        return make_response(jsonify({"message": "Profile deleted"}), 200)
+api.add_resource(ProfileByID, '/profiles/<int:id>')
 
 if __name__ == "__main__":
     app.run(port=5555, debug=True)
