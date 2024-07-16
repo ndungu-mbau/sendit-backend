@@ -45,6 +45,7 @@ class Order(db.Model, SerializerMixin):
 
 class Parcel(db.Model, SerializerMixin):
     __tablename__ = 'parcels'
+
     id = db.Column(db.Integer, primary_key=True)
     pickup_location = db.Column(db.String, nullable=False)
     destination = db.Column(db.String, nullable=False)
