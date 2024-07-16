@@ -1,7 +1,7 @@
 from faker import Faker
 from app import app
 from database import db
-from models import User, Order, Parcel, Feedback
+from models import User, Order, Parcel, Profile, Feedback,order_parcel_association
 
 fake = Faker()
 
@@ -16,7 +16,7 @@ def seed_data():
         for _ in range(5):
             user = User(
                 username=fake.user_name(),
-                email=fake.email(),
+                email=fake.unique.email(),  # Ensure unique emails
                 password=fake.password(length=12),
                 role=fake.random_element(elements=('admin', 'customer'))
             )
@@ -31,7 +31,7 @@ def seed_data():
                 pickup_address=fake.address(),
                 delivery_address=fake.address(),
                 status=fake.random_element(elements=('pending', 'shipped', 'delivered', 'canceled')),
-                user_id=fake.random_element(elements=[user.id for user in users])
+                user_id=fake.random_element(elements=[user.id for user in users])  # Ensure user ID exists
             )
             orders.append(order)
         db.session.add_all(orders)
@@ -43,7 +43,7 @@ def seed_data():
             parcel = Parcel(
                 pickup_location=fake.address(),
                 destination=fake.address(),
-                user_id=fake.random_element(elements=[user.id for user in users]),
+                user_id=fake.random_element(elements=[user.id for user in users]),  # Ensure user ID exists
                 weight=fake.random_number(digits=2),
                 price=fake.random_number(digits=3),
                 description=fake.text(max_nb_chars=200)
@@ -52,13 +52,32 @@ def seed_data():
         db.session.add_all(parcels)
         db.session.commit()
 
+        # Associate orders with parcels
+        for order in orders:
+            associated_parcels = fake.random_elements(elements=[parcel.id for parcel in parcels], unique=True, length=fake.random_int(min=1, max=3))
+            for parcel_id in associated_parcels:
+                db.session.execute(order_parcel_association.insert().values(order_id=order.order_id, parcel_id=parcel_id))
+        db.session.commit()
+
+        # Add sample profiles
+        profiles = []
+        for user in users:
+            profile = Profile(
+                profile_picture=fake.image_url(),
+                location=fake.city(),
+                user_id=user.id
+            )
+            profiles.append(profile)
+        db.session.add_all(profiles)
+        db.session.commit()
+
         # Add sample feedback
         feedbacks = []
         for _ in range(5):
             feedback = Feedback(
                 rating=fake.random_int(min=1, max=5),
                 comment=fake.text(max_nb_chars=200),
-                order_id=fake.random_element(elements=[order.order_id for order in orders])
+                order_id=fake.random_element(elements=[order.order_id for order in orders])  # Ensure order ID exists
             )
             feedbacks.append(feedback)
         db.session.add_all(feedbacks)

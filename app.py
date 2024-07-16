@@ -4,9 +4,7 @@ from flask_restful import Api, Resource
 from database import db
 from models import User, Order, Feedback, Parcel, Profile
 
-
 app = Flask(__name__)
-
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -15,7 +13,6 @@ migrate = Migrate(app, db)
 db.init_app(app)
 
 api = Api(app)
-
 
 @app.route('/')
 def index():
@@ -206,7 +203,7 @@ class FeedbackByID(Resource):
 
 api.add_resource(FeedbackByID, '/feedbacks/<int:id>')
 
-
+# Routes for Profiles
 class Profiles(Resource):
     def get(self):
         profiles = Profile.query.all()
@@ -248,7 +245,7 @@ class ProfileByID(Resource):
         db.session.delete(profile)
         db.session.commit()
         return make_response(jsonify({"message": "Profile deleted"}), 200)
-api.add_resource(ProfileByID, '/profiles/<int:id>')
 
 if __name__ == "__main__":
     app.run(port=5555, debug=True)
+

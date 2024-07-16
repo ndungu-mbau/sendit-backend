@@ -15,7 +15,7 @@ function Users() {
   const [showModal, setShowModal] = useState(false);
 
   const fetchUsers = () => {
-    fetch(`http://127.0.0.1:5555`, {
+    fetch(``, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }

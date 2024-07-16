@@ -68,7 +68,7 @@ function Dashboard() {
             </div>
             <div className="admin-user">
               <Link to={'/'}><img src={home} alt="" title="Go to home page" /></Link>
-              
+
               <div className="img-case">
                 <Link to={'/admin_profile'}><img src={logo} alt="" title="My profile"/></Link> 
               </div>

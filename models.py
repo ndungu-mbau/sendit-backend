@@ -4,13 +4,12 @@ from sqlalchemy.orm import relationship
 from sqlalchemy_serializer import SerializerMixin
 from database import db
 
-# Association table 
-order_item_association = Table(
-
-    'order_item_association',
+# Association table
+order_parcel_association = db.Table(
+    'order_parcel_association',
     db.Model.metadata,
     Column('order_id', Integer, ForeignKey('orders.order_id')),
-    Column('item_id', Integer, ForeignKey('items.id'))
+    Column('parcel_id', Integer, ForeignKey('parcels.id'))
 )
 class User(db.Model, SerializerMixin):
     __tablename__ = 'users'
@@ -39,19 +38,45 @@ class Order(db.Model, SerializerMixin):
     status = db.Column(db.String(50), default='pending')
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
 
-    items = db.relationship('Item', secondary=order_item_association, backref='orders', lazy='subquery')
-    feedback = db.relationship('Feedback', backref='order', lazy=True)
+    parcels = relationship('Parcel', secondary=order_parcel_association, backref='orders', lazy='subquery')
+    feedback = relationship('Feedback', backref='order', lazy=True)
 
-    serialize_rules = ('-items.orders', '-feedback.order',)
+    serialize_rules = ('-parcels.orders', '-feedback.order',)
 
-class Item(db.Model, SerializerMixin):
-    __tablename__ = 'items'
+class Parcel(db.Model, SerializerMixin):
+    __tablename__ = 'parcels'
+
     id = db.Column(db.Integer, primary_key=True)
-    item_name = db.Column(db.String(100), nullable=False)
-    description = db.Column(db.Text, nullable=False)
-    price = db.Column(db.Integer, nullable=False)
+    pickup_location = db.Column(db.String, nullable=False)
+    destination = db.Column(db.String, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    weight = db.Column(db.Float, nullable=False)
+    price = db.Column(db.Float, nullable=True)
+    description = db.Column(db.String)
 
-    serialize_rules = ('-orders.items',)
+    user = db.relationship('User', backref='parcels')
+
+    serialize_rules = ('-user.parcels',)
+
+
+class Profile(db.Model):
+    __tablename__ = 'profiles'
+
+    id = db.Column(db.Integer, primary_key=True)
+    profile_picture = db.Column(db.String(255))
+    location = db.Column(db.String)
+    created_at = db.Column(db.DateTime, default=db.func.now())
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    users = db.relationship('User', backref='profiles')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'profile_picture': self.profile_picture,
+            'location': self.location,
+            'created_at': self.created_at,
+            'user_id': self.user_id
+        }
 
 class Feedback(db.Model, SerializerMixin):
     __tablename__ = 'feedback'

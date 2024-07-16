@@ -17,7 +17,7 @@ function Parcels() {
   const token = localStorage.getItem('token')
 
   const fetchParcels = () => {
-    fetch(`http://127.0.0.1:5555`, {
+    fetch(``, {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
