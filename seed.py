@@ -1,13 +1,13 @@
 from faker import Faker
 from app import app
 from database import db
-from models import User, Order, Parcel, Profile, Feedback,order_parcel_association
+from models import User, Order, Parcel, Profile, Feedback, order_parcel_association
 
 fake = Faker()
 
 def seed_data():
     with app.app_context():
-        # Clear existing data
+        # Clear existing data and recreate tables
         db.drop_all()
         db.create_all()
 
