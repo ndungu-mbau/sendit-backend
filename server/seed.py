@@ -7,11 +7,11 @@ fake = Faker()
 
 def seed_data():
     with app.app_context():
-      
+
         db.drop_all()
         db.create_all()
 
-     
+
         users = []
         for _ in range(5):
             user = User(
