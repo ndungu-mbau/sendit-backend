@@ -80,4 +80,3 @@ class Feedback(db.Model, SerializerMixin):
     rating = db.Column(db.Integer, nullable=False)
     comment = db.Column(db.Text, nullable=False)
     order_id = Column(Integer, ForeignKey('orders.order_id'), nullable=False)
-
