@@ -13,6 +13,8 @@ order_parcel_association = db.Table(
 
 class User(db.Model, SerializerMixin):
     __tablename__ = 'users'
+
+    serialize_rules = ('-orders.user', '-parcels.user', '-password',)
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(60), nullable=False)
     email = db.Column(db.String(110), unique=True, nullable=False)
@@ -21,7 +23,6 @@ class User(db.Model, SerializerMixin):
     orders = db.relationship('Order', backref='user', lazy=True)
     parcels = db.relationship('Parcel', backref='user', lazy=True)
 
-    serialize_rules = ('-orders.user', '-parcels.user', '-password',)
 
     @db.validates('email')
     def validate_email(self, key, email):
@@ -33,6 +34,8 @@ class User(db.Model, SerializerMixin):
 
 class Order(db.Model, SerializerMixin):
     __tablename__ = 'orders'
+
+    serialize_rules = ('-user.orders', '-parcels.orders', '-feedback.order',)
     order_id = db.Column(db.Integer, primary_key=True)
     pickup_address = db.Column(db.Text, nullable=False)
     delivery_address = db.Column(db.Text, nullable=False)
@@ -42,11 +45,11 @@ class Order(db.Model, SerializerMixin):
     parcels = relationship('Parcel', secondary=order_parcel_association, backref='orders', lazy='subquery')
     feedback = relationship('Feedback', backref='order', lazy=True)
 
-    serialize_rules = ('-user.orders', '-parcels.orders', '-feedback.order',)
 
 class Parcel(db.Model, SerializerMixin):
     __tablename__ = 'parcels'
 
+    serialize_rules = ('-user.parcels', '-orders.parcels',)
     id = db.Column(db.Integer, primary_key=True)
     pickup_location = db.Column(db.String, nullable=False)
     destination = db.Column(db.String, nullable=False)
@@ -55,7 +58,6 @@ class Parcel(db.Model, SerializerMixin):
     price = db.Column(db.Float, nullable=True)
     description = db.Column(db.String)
 
-    serialize_rules = ('-user.parcels', '-orders.parcels',)
 
 class Profile(db.Model):
     __tablename__ = 'profiles'
@@ -77,9 +79,10 @@ class Profile(db.Model):
 
 class Feedback(db.Model, SerializerMixin):
     __tablename__ = 'feedback'
+
+    # serialize_rules = ('-order.feedback',)
     id = db.Column(db.Integer, primary_key=True)
     rating = db.Column(db.Integer, nullable=False)
     comment = db.Column(db.Text, nullable=False)
     order_id = Column(Integer, ForeignKey('orders.order_id'), nullable=False)
 
-    serialize_rules = ('-order.feedback',)

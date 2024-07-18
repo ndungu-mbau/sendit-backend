@@ -5,7 +5,7 @@ from sqlalchemy_serializer import SerializerMixin
 
 Base = declarative_base()
 
-# Association table
+
 order_parcel_association = Table(
     'order_parcel_association',
     Base.metadata,
