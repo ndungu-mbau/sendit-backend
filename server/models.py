@@ -3,7 +3,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy_serializer import SerializerMixin
 from database import db
 
-# Association table
+
 order_parcel_association = db.Table(
     'order_parcel_association',
     db.Model.metadata,

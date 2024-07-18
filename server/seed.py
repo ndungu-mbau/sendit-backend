@@ -7,11 +7,11 @@ fake = Faker()
 
 def seed_data():
     with app.app_context():
-        # Clear existing data
+      
         db.drop_all()
         db.create_all()
 
-        # Add sample users
+     
         users = []
         for _ in range(5):
             user = User(
@@ -24,7 +24,7 @@ def seed_data():
         db.session.add_all(users)
         db.session.commit()
 
-        # Add sample orders
+       
         orders = []
         for _ in range(5):
             order = Order(
@@ -37,7 +37,7 @@ def seed_data():
         db.session.add_all(orders)
         db.session.commit()
 
-        # Add sample parcels
+       
         parcels = []
         for _ in range(10):
             parcel = Parcel(
@@ -52,14 +52,14 @@ def seed_data():
         db.session.add_all(parcels)
         db.session.commit()
 
-        # Associate orders with parcels
+       
         for order in orders:
             associated_parcels = fake.random_elements(elements=[parcel.id for parcel in parcels], unique=True, length=fake.random_int(min=1, max=3))
             for parcel_id in associated_parcels:
                 db.session.execute(order_parcel_association.insert().values(order_id=order.order_id, parcel_id=parcel_id))
         db.session.commit()
 
-        # Add sample profiles
+       
         profiles = []
         for user in users:
             profile = Profile(
@@ -71,7 +71,7 @@ def seed_data():
         db.session.add_all(profiles)
         db.session.commit()
 
-        # Add sample feedback
+       
         feedbacks = []
         for _ in range(5):
             feedback = Feedback(

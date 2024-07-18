@@ -16,9 +16,9 @@ api = Api(app)
 
 @app.route('/')
 def index():
-    return "<h1>Welcome to the Parcel Pro App</h1>"
+    return "<h1>Welcome to Sendit App</h1>"
 
-# Routes for Users
+
 class Users(Resource):
     def get(self):
         users = User.query.all()
@@ -64,7 +64,7 @@ class UserByID(Resource):
 
 api.add_resource(UserByID, '/users/<int:id>')
 
-# Routes for Orders
+
 class Orders(Resource):
     def get(self):
         orders = Order.query.all()
@@ -110,7 +110,7 @@ class OrderByID(Resource):
 
 api.add_resource(OrderByID, '/orders/<int:id>')
 
-# Routes for Parcels
+
 class Parcels(Resource):
     def get(self):
         parcels = Parcel.query.all()
@@ -159,7 +159,7 @@ class ParcelByID(Resource):
 
 api.add_resource(ParcelByID, '/parcels/<int:id>')
 
-# Routes for Feedback
+
 class Feedbacks(Resource):
     def get(self):
         feedbacks = Feedback.query.all()
@@ -204,7 +204,7 @@ class FeedbackByID(Resource):
 
 api.add_resource(FeedbackByID, '/feedbacks/<int:id>')
 
-# Routes for Profiles
+
 class Profiles(Resource):
     def get(self):
         profiles = Profile.query.all()
