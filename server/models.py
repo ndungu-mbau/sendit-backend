@@ -4,12 +4,12 @@ from sqlalchemy_serializer import SerializerMixin
 from database import db
 
 
-order_parcel_association = db.Table(
-    'order_parcel_association',
-    db.Model.metadata,
-    Column('order_id', Integer, ForeignKey('orders.order_id')),
-    Column('parcel_id', Integer, ForeignKey('parcels.id'))
-)
+# order_parcel_association = db.Table(
+#     'order_parcel_association',
+#     db.Model.metadata,
+#     Column('order_id', Integer, ForeignKey('orders.order_id')),
+#     Column('parcel_id', Integer, ForeignKey('parcels.id'))
+# )
 
 class User(db.Model, SerializerMixin):
     __tablename__ = 'users'
@@ -42,7 +42,7 @@ class Order(db.Model, SerializerMixin):
     status = db.Column(db.String(50), default='pending')
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
 
-    parcels = relationship('Parcel', secondary=order_parcel_association, backref='orders', lazy='subquery')
+    # parcels = relationship('Parcel', secondary=order_parcel_association, backref='orders', lazy='subquery')
     feedback = relationship('Feedback', backref='order', lazy=True)
 
 
@@ -59,7 +59,7 @@ class Parcel(db.Model, SerializerMixin):
     description = db.Column(db.String)
 
 
-class Profile(db.Model):
+class Profile(db.Model,SerializerMixin):
     __tablename__ = 'profiles'
     id = db.Column(db.Integer, primary_key=True)
     profile_picture = db.Column(db.String(255))
@@ -68,19 +68,14 @@ class Profile(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     user = db.relationship('User', backref='profiles')
 
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'profile_picture': self.profile_picture,
-            'location': self.location,
-            'created_at': self.created_at,
-            'user_id': self.user_id
-        }
+    serialize_rules = ('-user.profiles',)
+
+
 
 class Feedback(db.Model, SerializerMixin):
     __tablename__ = 'feedback'
 
-    # serialize_rules = ('-order.feedback',)
+    serialize_rules = ('-order.feedback',)
     id = db.Column(db.Integer, primary_key=True)
     rating = db.Column(db.Integer, nullable=False)
     comment = db.Column(db.Text, nullable=False)
