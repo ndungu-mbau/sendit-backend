@@ -20,7 +20,7 @@ function Orders() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    fetch(``, {
+    fetch(`http://127.0.0.1:5000`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -46,7 +46,7 @@ function Orders() {
   };
 
   useEffect(() => {
-    fetch(`https://sendit-backend-qhth.onrender.com/orders`, {
+    fetch(`http://127.0.0.1:5000`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -68,7 +68,7 @@ function Orders() {
   }, []);
 
   const handleViewDetails = (orderId) => {
-    fetch(`https://sendit-backend-qhth.onrender.com/orders/${orderId}`, {
+    fetch(`http://127.0.0.1:5000`, {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${localStorage.getItem('token')}`

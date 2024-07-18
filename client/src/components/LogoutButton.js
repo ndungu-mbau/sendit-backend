@@ -13,7 +13,7 @@ const LogoutButton = ({ className, children }) => {
         return;
       }
 
-      const response = await axios.get('https://sendit-backend-qhth.onrender.com/logout', {
+      const response = await axios.get('http://127.0.0.1:5000', {
         headers: {
           Authorization: `Bearer ${token}`,
         },

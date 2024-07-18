@@ -32,7 +32,7 @@ const DeliveryOrderSummary = () => {
           return;
         }
 
-        const response = await axios.get(`https://sendit-backend-qhth.onrender.com/users/${userId}/parcels`, {
+        const response = await axios.get(`http://127.0.0.1:5000`, {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,
@@ -64,7 +64,7 @@ const DeliveryOrderSummary = () => {
       return;
     }
 
-    const response = await axios.post(`https://sendit-backend-qhth.onrender.com/parcels/${parcelId}/cancel`, null, {
+    const response = await axios.post(`http://127.0.0.1:5000`, null, {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
@@ -96,10 +96,10 @@ const DeliveryOrderSummary = () => {
       return;
     }
 
-    console.log('Sending PUT request to:', `https://sendit-backend-qhth.onrender.com/parcels/${parcelId}/destination`);
+    console.log('Sending PUT request to:', `http://127.0.0.1:5000`);
     console.log('Request data:', { destination: newDestination });
 
-    const response = await axios.put(`https://sendit-backend-qhth.onrender.com/parcels/${parcelId}/destination`, { destination: newDestination }, {
+    const response = await axios.put(`${parcelId}/destination`, { destination: newDestination }, {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
@@ -118,8 +118,7 @@ const DeliveryOrderSummary = () => {
     console.error('An error occurred:', error);
     setErrorMessage('Failed to change destination.');
   }
-};
-
+};  
   return (
     <div>
       <div className="delivery-order-summary-navbar">

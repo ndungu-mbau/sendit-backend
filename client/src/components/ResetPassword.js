@@ -20,7 +20,7 @@ const ResetPassword = () => {
 
     try {
       const response = await fetch(
-        "https://sendit-backend-qhth.onrender.com/forgot_password",
+        "http://127.0.0.1:5000",
         {
           method: "POST",
           headers: {

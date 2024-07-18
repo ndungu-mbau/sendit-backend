@@ -80,7 +80,7 @@ const NewDeliveryOrder = () => {
       }
 
       const response = await axios.post(
-        'https://sendit-backend-qhth.onrender.com/parcels',
+        'http://127.0.0.1:5000',
         {
           pickup_location: formData.pickupLocation,
           destination: formData.deliveryAddress,

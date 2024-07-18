@@ -112,7 +112,7 @@ const SignUp = (props) => {
       setIsLoading(true);
       try {
         const response = await fetch(
-          "https://sendit-backend-qhth.onrender.com/signup",
+          "http://127.0.0.1:5000",
           {
             method: "POST",
             headers: {
@@ -158,7 +158,7 @@ const SignUp = (props) => {
       setIsLoading(true);
       try {
         const response = await fetch(
-          "https://sendit-backend-qhth.onrender.com/login",
+          "http://127.0.0.1:5000",
           {
             method: "POST",
             headers: {

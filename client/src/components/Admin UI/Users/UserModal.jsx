@@ -24,7 +24,7 @@ const UserModal = ({ user, onClose }) => {
   };
 
   const handleMakeAdmin = () => {
-    fetch(`https://sendit-backend-qhth.onrender.com/upgrade_user`, {
+    fetch(`http://127.0.0.1:5000`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -41,7 +41,7 @@ const UserModal = ({ user, onClose }) => {
   };
 
   const handleDelete = () => {
-    fetch(`https://sendit-backend-qhth.onrender.com/users/${user.id}`, {
+    fetch(`http://127.0.0.1:5000`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`

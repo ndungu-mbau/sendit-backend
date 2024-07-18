@@ -10,7 +10,7 @@ function OrderDetail({order, onClose}) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    fetch(`${order.id}`, {
+    fetch(`http://127.0.0.1:5000`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
