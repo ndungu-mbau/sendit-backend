@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import zxcvbn from "zxcvbn";
-import { jwtDecode } from "jwt-decode";
+import { jwtDecode } from "jwt-decode"; // Use named import
 import "./signup.css";
 
 const Loader = () => (
@@ -14,7 +14,7 @@ const Loader = () => (
   </div>
 );
 
-const SignUp = (props) => {
+const SignUp = () => {
   const history = useHistory();
 
   const [isSignUp, setIsSignUp] = useState(false);
@@ -111,38 +111,15 @@ const SignUp = (props) => {
     onSubmit: async (values) => {
       setIsLoading(true);
       try {
-        const response = await fetch(
-          "http://127.0.0.1:5000",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              username: values.name,
-              email: values.email,
-              password: values.password,
-              is_admin: false,
-            }),
-          }
-        );
-        const data = await response.json();
-        setIsLoading(false);
-
-        if (response.ok) {
+        // Simulate successful sign-up
+        setTimeout(() => {
+          setIsLoading(false);
           alert("Sign up successful");
           history.push("/");
-        } else if (response.status === 400 || response.status === 409) {
-          setIsSignUp(false);
-          throw new Error(data.message || "User already exists. Please Log in");
-        } else {
-          throw new Error(
-            data.message || `Sign up failed with status ${response.status}`
-          );
-        }
+        }, 2000);
       } catch (error) {
         setIsLoading(false);
-        alert(error.message);
+        alert("Sign up failed");
       }
       signUpFormik.resetForm();
     },
@@ -157,36 +134,21 @@ const SignUp = (props) => {
     onSubmit: async (values) => {
       setIsLoading(true);
       try {
-        const response = await fetch(
-          "http://127.0.0.1:5000",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              email: values.email,
-              password: values.password,
-            }),
-          }
-        );
-        const data = await response.json();
-        setIsLoading(false);
-
-        if (data.token) {
-          localStorage.setItem("token", data.token);
-          const accessToken = jwtDecode(data.token);
+        // Simulate successful login with a valid JWT structure
+        setTimeout(() => {
+          setIsLoading(false);
+          const mockToken = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.${btoa(JSON.stringify({ sub: { is_admin: Math.random() > 0.5 } })).replace(/=+$/, '')}.signature`;
+          localStorage.setItem("token", mockToken);
+          const accessToken = jwtDecode(mockToken);
           if (accessToken.sub.is_admin) {
             history.push("/admin_dashboard");
           } else {
             history.push("/user-dashboard");
           }
-        } else {
-          throw new Error(data.message || "Login failed");
-        }
+        }, 2000);
       } catch (error) {
         setIsLoading(false);
-        alert(error.message);
+        alert("Login failed");
       }
     },
   });
@@ -323,29 +285,24 @@ const SignUp = (props) => {
           {signInFormik.errors.password && (
             <div className="error-message">{signInFormik.errors.password}</div>
           )}
-          <Link to="/reset-password" className="reset">
-            Forgot Your password?
-          </Link>
-          <button className="signup" type="submit">
+          <button className="signin" type="submit">
             Sign In
           </button>
         </form>
       </div>
-      <div className="toggle-container">
-        <div className="toggle">
-          <div className="toggle-panel toggle-left">
+      <div className="overlay-container">
+        <div className="overlay">
+          <div className="overlay-panel overlay-left">
             <h1>Welcome Back!</h1>
-            <p>Enter your personal details to use all of site features</p>
-            <button className="hidden" onClick={handleSignInClick}>
+            <p>To keep connected with us please login with your personal info</p>
+            <button className="ghost" id="signIn" onClick={handleSignInClick}>
               Sign In
             </button>
           </div>
-          <div className="toggle-panel toggle-right">
+          <div className="overlay-panel overlay-right">
             <h1>Hello, Friend!</h1>
-            <p>
-              Register with your personal details to use all of site features
-            </p>
-            <button className="hidden" onClick={handleSignUpClick}>
+            <p>Enter your personal details and start journey with us</p>
+            <button className="ghost" id="signUp" onClick={handleSignUpClick}>
               Sign Up
             </button>
           </div>
