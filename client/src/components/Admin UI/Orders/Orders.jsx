@@ -20,7 +20,7 @@ function Orders() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    fetch(`http://127.0.0.1:5000`, {
+    fetch(`http://127.0.0.1:5000/orders`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -46,7 +46,7 @@ function Orders() {
   };
 
   useEffect(() => {
-    fetch(`http://127.0.0.1:5000`, {
+    fetch(`http://127.0.0.1:5000/orders`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -68,7 +68,7 @@ function Orders() {
   }, []);
 
   const handleViewDetails = (orderId) => {
-    fetch(`http://127.0.0.1:5000`, {
+    fetch(`http://127.0.0.1:5000/order`, {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${localStorage.getItem('token')}`

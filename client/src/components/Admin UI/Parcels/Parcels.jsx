@@ -40,7 +40,7 @@ function Parcels() {
   }, []);
 
   const handleViewDetails = (parcelId) => {
-    fetch(`http://127.0.0.1:5000`, {
+    fetch(`http://127.0.0.1:5000/parcels`, {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`

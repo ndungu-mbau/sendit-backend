@@ -32,7 +32,7 @@ const DeliveryOrderSummary = () => {
           return;
         }
 
-        const response = await axios.get(`http://127.0.0.1:5000`, {
+        const response = await axios.get(`http://127.0.0.1:3000`, {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,

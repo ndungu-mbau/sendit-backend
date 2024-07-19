@@ -7,7 +7,7 @@ const UserModal = ({ user, onClose }) => {
   const [email, setEmail] = useState(user.email);
 
   const handleUpdate = () => {
-    fetch(`${user.id}`, {
+    fetch(`http://127.0.0.1:5000/users`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -24,7 +24,7 @@ const UserModal = ({ user, onClose }) => {
   };
 
   const handleMakeAdmin = () => {
-    fetch(`http://127.0.0.1:5000`, {
+    fetch(`http://127.0.0.1:5000/upgrade_user`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
