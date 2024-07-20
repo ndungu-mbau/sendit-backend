@@ -1,30 +1,33 @@
-from sqlalchemy import Column, Integer, String, Text, ForeignKey
-from sqlalchemy.orm import relationship
+from flask_login import UserMixin
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, Float, DateTime
+from sqlalchemy.orm import relationship, validates
 from sqlalchemy_serializer import SerializerMixin
+from flask_bcrypt import Bcrypt
 from database import db
 
+# Initialize Bcrypt for password hashing
+bcrypt = Bcrypt()
 
-# order_parcel_association = db.Table(
-#     'order_parcel_association',
-#     db.Model.metadata,
-#     Column('order_id', Integer, ForeignKey('orders.order_id')),
-#     Column('parcel_id', Integer, ForeignKey('parcels.id'))
-# )
-
-class User(db.Model, SerializerMixin):
+class User(db.Model, UserMixin, SerializerMixin):
     __tablename__ = 'users'
-
     serialize_rules = ('-orders.user', '-parcels.user', '-password',)
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(60), nullable=False)
-    email = db.Column(db.String(110), unique=True, nullable=False)
-    password = db.Column(db.String(40), nullable=False)
-    role = db.Column(db.String(50), nullable=False)
-    orders = db.relationship('Order', backref='user', lazy=True)
-    parcels = db.relationship('Parcel', backref='user', lazy=True)
 
+    id = Column(Integer, primary_key=True)
+    username = Column(String(150), nullable=False, unique=True)
+    email = Column(String(150), unique=True, nullable=False)
+    password = Column(String(256), nullable=False)
+    role = Column(String(50), nullable=False, default='user')
+    orders = relationship('Order', backref='user', lazy=True)
+    parcels = relationship('Parcel', backref='user', lazy=True)
+    profiles = relationship('Profile', backref='user', lazy=True)
 
-    @db.validates('email')
+    def __init__(self, username, email, password, role='user'):
+        self.username = username
+        self.email = email
+        self.password = bcrypt.generate_password_hash(password).decode('utf-8')
+        self.role = role
+
+    @validates('email')
     def validate_email(self, key, email):
         import re
         regex = r'^\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
@@ -32,50 +35,52 @@ class User(db.Model, SerializerMixin):
             raise ValueError("Invalid email address")
         return email
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'username': self.username,
+            'email': self.email,
+            'role': self.role
+        }
+
 class Order(db.Model, SerializerMixin):
     __tablename__ = 'orders'
-    serialize_rules = ('-user.orders', '-parcels.orders', '-feedback.order',)
-    order_id = db.Column(db.Integer, primary_key=True)
-    pickup_address = db.Column(db.Text, nullable=False)
-    delivery_address = db.Column(db.Text, nullable=False)
-    status = db.Column(db.String(50), default='pending')
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    serialize_rules = ('-user.orders', '-feedback.order',)
 
-    # parcels = relationship('Parcel', secondary=order_parcel_association, backref='orders', lazy='subquery')
+    order_id = Column(Integer, primary_key=True)
+    pickup_address = Column(Text, nullable=False)
+    delivery_address = Column(Text, nullable=False)
+    status = Column(String(50), default='pending')
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
     feedback = relationship('Feedback', backref='order', lazy=True)
-
 
 class Parcel(db.Model, SerializerMixin):
     __tablename__ = 'parcels'
+    serialize_rules = ('-user.parcels',)
 
-    serialize_rules = ('-user.parcels', '-orders.parcels',)
-    id = db.Column(db.Integer, primary_key=True)
-    pickup_location = db.Column(db.String, nullable=False)
-    destination = db.Column(db.String, nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    weight = db.Column(db.Float, nullable=False)
-    price = db.Column(db.Float, nullable=True)
-    description = db.Column(db.String)
+    id = Column(Integer, primary_key=True)
+    pickup_location = Column(String, nullable=False)
+    destination = Column(String, nullable=False)
+    user_id = Column(Integer, ForeignKey('users.id'))
+    weight = Column(Float, nullable=False)
+    price = Column(Float, nullable=True)
+    description = Column(String)
 
-
-class Profile(db.Model,SerializerMixin):
+class Profile(db.Model, SerializerMixin):
     __tablename__ = 'profiles'
-    id = db.Column(db.Integer, primary_key=True)
-    profile_picture = db.Column(db.String(255))
-    location = db.Column(db.String)
-    created_at = db.Column(db.DateTime, default=db.func.now())
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    user = db.relationship('User', backref='profiles')
-
     serialize_rules = ('-user.profiles',)
 
-
+    id = Column(Integer, primary_key=True)
+    profile_picture = Column(String(255))
+    location = Column(String)
+    created_at = Column(DateTime, default=db.func.now())
+    user_id = Column(Integer, ForeignKey('users.id'))
 
 class Feedback(db.Model, SerializerMixin):
     __tablename__ = 'feedback'
-
     serialize_rules = ('-order.feedback',)
-    id = db.Column(db.Integer, primary_key=True)
-    rating = db.Column(db.Integer, nullable=False)
-    comment = db.Column(db.Text, nullable=False)
+
+    id = Column(Integer, primary_key=True)
+    rating = Column(Integer, nullable=False)
+    comment = Column(Text, nullable=False)
     order_id = Column(Integer, ForeignKey('orders.order_id'), nullable=False)

@@ -1,23 +1,92 @@
 from flask import Flask, make_response, request, jsonify
 from flask_migrate import Migrate
-from flask_restful import Api, Resource
+from flask_restful import Api, Resource, reqparse
+from flask_bcrypt import Bcrypt
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from database import db
 from models import User, Order, Feedback, Parcel, Profile
+from flask_jwt_extended import create_access_token, JWTManager, create_refresh_token, jwt_required, current_user, get_jwt
 
 app = Flask(__name__)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://parcel_pro_user:kDanjYAjMWvzNS8rRU6Y6pmssiEY2UFB@dpg-cqdlpkogph6c73a8ilbg-a.oregon-postgres.render.com/send_it_db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SECRET_KEY'] = '9d970c5fb1d04ea380828d9c491448ce'
 
-migrate = Migrate(app, db)
+
+
 db.init_app(app)
-
+migrate = Migrate(app, db)
+bcrypt = Bcrypt(app)
+jwt = JWTManager(app)
+# login_manager = LoginManager(app)
+# login_manager.login_view = 'login'
 api = Api(app)
+
+# @login_manager.user_loader
+# def load_user(user_id):
+#     return User.query.get(int(user_id))
 
 @app.route('/')
 def index():
     return "<h1>Welcome to Sendit App</h1>"
 
+register_args = reqparse.RequestParser()
+register_args.add_argument('email')
+register_args.add_argument('password')
+register_args.add_argument('username')
+register_args.add_argument('role')
+
+class Signup(Resource):
+    def post(self):
+        data = register_args.parse_args()
+        print(f"Received registration data: {data}")
+
+        hashed_password = bcrypt.generate_password_hash(data.get('password')).decode('utf-8')
+        print(f"Hashed password: {hashed_password}")
+
+        new_user = User(email=data.get('email'), username=data.get('username'), role=data.get('role'), password=hashed_password)
+        db.session.add(new_user)
+        db.session.commit()
+        return {"msg": 'User created successfully'}, 201
+
+api.add_resource(Signup, '/signup')
+
+
+
+login_args = reqparse.RequestParser()
+login_args.add_argument('email')
+login_args.add_argument('password')
+
+class Login(Resource):
+    def post(self):
+        data = login_args.parse_args()
+        user = User.query.filter_by(email=data.get('email')).first()
+
+        if not user:
+            return {"msg": "User does not exist in our database"}, 404
+
+        print(f"Stored password hash: {user.password}")
+        print(f"Provided password: {data.get('password')}")
+
+        if not bcrypt.check_password_hash(user.password, data.get('password')):
+            print("Password does not match")
+            return {"msg": "Password is incorrect!"}, 401
+
+        print("Password matches")
+        token = create_access_token(identity=user.id)
+        refresh_token = create_refresh_token(identity=user.id)
+        return {"token": token, "refresh_token": refresh_token}, 200
+
+api.add_resource(Login, '/login')
+
+class Logout(Resource):
+    @login_required
+    def post(self):
+        logout_user()
+        return make_response(jsonify({'message': 'Logged out successfully'}), 200)
+
+api.add_resource(Logout, '/logout')
 
 class Users(Resource):
     def get(self):
@@ -64,7 +133,6 @@ class UserByID(Resource):
 
 api.add_resource(UserByID, '/users/<int:id>')
 
-
 class Orders(Resource):
     def get(self):
         orders = Order.query.all()
@@ -109,7 +177,6 @@ class OrderByID(Resource):
         return make_response(jsonify({"message": "Order deleted"}), 200)
 
 api.add_resource(OrderByID, '/orders/<int:id>')
-
 
 class Parcels(Resource):
     def get(self):
@@ -156,9 +223,7 @@ class ParcelByID(Resource):
         db.session.commit()
         return make_response(jsonify({"message": "Parcel deleted"}), 200)
 
-
 api.add_resource(ParcelByID, '/parcels/<int:id>')
-
 
 class Feedbacks(Resource):
     def get(self):
@@ -203,7 +268,6 @@ class FeedbackByID(Resource):
         return make_response(jsonify({"message": "Feedback deleted"}), 200)
 
 api.add_resource(FeedbackByID, '/feedbacks/<int:id>')
-
 
 class Profiles(Resource):
     def get(self):
@@ -251,3 +315,5 @@ api.add_resource(ProfileByID, '/profiles/<int:id>')
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+
