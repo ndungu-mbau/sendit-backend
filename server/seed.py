@@ -1,28 +1,42 @@
+
 from faker import Faker
-from app import app
-from database import db
-from models import User, Order, Parcel, Profile, Feedback
+from server.app import app, bcrypt
+from server.database import db
+from server.models import User, Order, Parcel, Profile, Feedback
+from sqlalchemy.sql import text
 
 fake = Faker()
 
 def seed_data():
     with app.app_context():
-        
-        db.drop_all()
+
+        with db.engine.connect() as conn:
+            conn.execute(text("DROP TABLE IF EXISTS feedback CASCADE;"))
+            conn.execute(text("DROP TABLE IF EXISTS parcels CASCADE;"))
+            conn.execute(text("DROP TABLE IF EXISTS orders CASCADE;"))
+            conn.execute(text("DROP TABLE IF EXISTS profiles CASCADE;"))
+            conn.execute(text("DROP TABLE IF EXISTS users CASCADE;"))
+
         db.create_all()
 
+        print("Dropped and recreated tables.")
 
         users = []
         for _ in range(5):
+            password = fake.password(length=12)
+            hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
             user = User(
                 username=fake.user_name(),
                 email=fake.unique.email(),
-                password=fake.password(length=12),
+                password=hashed_password,
                 role=fake.random_element(elements=('admin', 'customer'))
             )
             users.append(user)
+            print(f"Added user: {user.username}, email: {user.email}, password: {password}")
         db.session.add_all(users)
         db.session.commit()
+
+        print("Seeded Users.")
 
 
         orders = []
@@ -34,8 +48,11 @@ def seed_data():
                 user_id=fake.random_element(elements=[user.id for user in users])
             )
             orders.append(order)
+            print(f"Added order with status: {order.status}")
         db.session.add_all(orders)
         db.session.commit()
+
+        print("Seeded Orders.")
 
 
         parcels = []
@@ -49,15 +66,11 @@ def seed_data():
                 description=fake.text(max_nb_chars=200)
             )
             parcels.append(parcel)
+            print(f"Added parcel from {parcel.pickup_location} to {parcel.destination}")
         db.session.add_all(parcels)
         db.session.commit()
 
-
-        # for order in orders:
-        #     associated_parcels = fake.random_elements(elements=[parcel.id for parcel in parcels], unique=True, length=fake.random_int(min=1, max=3))
-        #     for parcel_id in associated_parcels:
-        #         db.session.execute(order_parcel_association.insert().values(order_id=order.order_id, parcel_id=parcel_id))
-        # db.session.commit()
+        print("Seeded Parcels.")
 
 
         profiles = []
@@ -68,8 +81,11 @@ def seed_data():
                 user_id=user.id
             )
             profiles.append(profile)
+            print(f"Added profile for user {user.username} in {profile.location}")
         db.session.add_all(profiles)
         db.session.commit()
+
+        print("Seeded Profiles.")
 
 
         feedbacks = []
@@ -80,8 +96,11 @@ def seed_data():
                 order_id=fake.random_element(elements=[order.order_id for order in orders])
             )
             feedbacks.append(feedback)
+            print(f"Added feedback with rating: {feedback.rating}")
         db.session.add_all(feedbacks)
         db.session.commit()
+
+        print("Seeded Feedbacks.")
 
 if __name__ == "__main__":
     seed_data()
