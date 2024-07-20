@@ -2,7 +2,7 @@
 from faker import Faker
 from server.app import app, bcrypt
 from server.database import db
-from models import User, Order, Parcel, Profile, Feedback
+from server.models import User, Order, Parcel, Profile, Feedback
 from sqlalchemy.sql import text
 
 fake = Faker()

@@ -4,7 +4,7 @@ from flask_restful import Api, Resource, reqparse
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from server.database import db
-from models import User, Order, Feedback, Parcel, Profile
+from server.models import User, Order, Feedback, Parcel, Profile
 from flask_jwt_extended import create_access_token, JWTManager, create_refresh_token, jwt_required, current_user, get_jwt
 
 app = Flask(__name__)
