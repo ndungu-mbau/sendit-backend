@@ -1,7 +1,7 @@
 
 from faker import Faker
-from app import app, bcrypt
-from database import db
+from server.app import app, bcrypt
+from server.database import db
 from models import User, Order, Parcel, Profile, Feedback
 from sqlalchemy.sql import text
 
