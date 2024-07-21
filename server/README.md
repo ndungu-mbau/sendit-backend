@@ -25,7 +25,8 @@ python seed.py
 
 ## Running the application
 python app.py
-https://github.com/kimwereafk/Parcel-Pro-backend.git
+https://github.com/kimwereafk/SendIT-backend
+
 
 
 
