@@ -1,8 +1,8 @@
 
 from faker import Faker
-from server.app import app, bcrypt
-from server.database import db
-from server.models import User, Order, Parcel, Profile, Feedback
+from app import app, bcrypt
+from database import db
+from models import User, Order, Parcel, Profile, Feedback
 from sqlalchemy.sql import text
 
 fake = Faker()
@@ -11,11 +11,11 @@ def seed_data():
     with app.app_context():
 
         with db.engine.connect() as conn:
-            conn.execute(text("DROP TABLE IF EXISTS feedback CASCADE;"))
-            conn.execute(text("DROP TABLE IF EXISTS parcels CASCADE;"))
-            conn.execute(text("DROP TABLE IF EXISTS orders CASCADE;"))
-            conn.execute(text("DROP TABLE IF EXISTS profiles CASCADE;"))
-            conn.execute(text("DROP TABLE IF EXISTS users CASCADE;"))
+            conn.execute(text("DROP TABLE IF EXISTS feedback;"))
+            conn.execute(text("DROP TABLE IF EXISTS parcels;"))
+            conn.execute(text("DROP TABLE IF EXISTS orders;"))
+            conn.execute(text("DROP TABLE IF EXISTS profiles;"))
+            conn.execute(text("DROP TABLE IF EXISTS users;"))
 
         db.create_all()
 

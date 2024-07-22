@@ -3,7 +3,7 @@ from sqlalchemy import Column, Integer, String, Text, ForeignKey, Float, DateTim
 from sqlalchemy.orm import relationship, validates
 from sqlalchemy_serializer import SerializerMixin
 from flask_bcrypt import Bcrypt
-from server.database import db
+from database import db
 
 # Initialize Bcrypt for password hashing
 bcrypt = Bcrypt()
