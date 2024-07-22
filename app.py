@@ -4,8 +4,7 @@ import jwt
 from flask import Flask, make_response, request, jsonify
 from flask_migrate import Migrate
 from flask_restful import Api, Resource, reqparse
-from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
-from flask_cors import CORS
+from flask_bcrypt import Bcrypt
 from database import db
 from models import User, Order, Feedback, Parcel, Profile
 
@@ -20,7 +19,7 @@ app.config['SECRET_KEY'] = '9d970c5fb1d04ea380828d9c491448ce'
 db.init_app(app)
 migrate = Migrate(app, db)
 api = Api(app)
-CORS(app)
+bcrypt = Bcrypt(app)
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG, 
@@ -56,16 +55,16 @@ login_args = reqparse.RequestParser()
 login_args.add_argument('email', type=str, required=True, help='Email address is required')
 login_args.add_argument('password', type=str, required=True, help='Password is required')
 
-# Resources
 class Signup(Resource):
     def post(self):
         data = register_args.parse_args()
-        role = data.get('role', 'user')
+        role = data.get('role', 'customer')
+        hashed_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')  # Hash the password
         new_user = User(
             email=data['email'],
             username=data['username'],
             role=role,
-            password=data['password']  # Store password as originally entered
+            password=hashed_password  # Store the hashed password
         )
         try:
             db.session.add(new_user)
@@ -79,77 +78,40 @@ class Signup(Resource):
 
 class Login(Resource):
     def post(self):
-        data = request.get_json()
+        data = login_args.parse_args()
         email = data.get('email')
         password = data.get('password')
-        
+
         # Fetch user from the database
         user = User.query.filter_by(email=email).first()
         
         if not user:
-            logging.info(f'Login attempt with non-existent email: {email}')
+            logger.info(f'Login attempt with non-existent email: {email}')
             return {"msg": "User does not exist in our database"}, 404
         
-        # Debugging: Log stored password and provided password
-        logging.debug(f'Stored password: {user.password}')
-        logging.debug(f'Provided password: {password}')
-        
-        if user.password != password:
-            logging.info(f'Failed password attempt for email: {email}')
+        # Compare the provided password with the stored hashed password
+        if not bcrypt.check_password_hash(user.password, password):
+            logger.info(f'Failed password attempt for email: {email}')
             return {"msg": "Password is incorrect!"}, 401
         
         # Generate JWT token
-        token = jwt.encode({
-            'identity': user.id,
-            'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=1)
-        }, app.config['SECRET_KEY'], algorithm='HS256')
-        
-        # Generate refresh token
-        refresh_token = jwt.encode({
-            'identity': user.id,
-            'exp': datetime.datetime.utcnow() + datetime.timedelta(days=30)
-        }, app.config['SECRET_KEY'], algorithm='HS256')
-
-        logging.info(f'Successful login for email: {email}')
-        return {"token": token, "refresh_token": refresh_token}, 200
-
-class Logout(Resource):
-    @login_required
-    def post(self):
-        logout_user()
-        logger.info(f"User logged out successfully: {current_user.username}")
-        return make_response(jsonify({'message': 'Logged out successfully'}), 200)
-
-class PasswordReset(Resource):
-    def post(self):
-        data = request.get_json()
-        token = data.get('token')
-        new_password = data.get('password')
-
-        if not token or not new_password:
-            logger.warning("Password reset attempt with missing token or new password")
-            return {"message": "Token and new password are required"}, 400
-
         try:
-            decoded_token = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
-            user_id = decoded_token['identity']
-        except jwt.ExpiredSignatureError:
-            logger.warning("Password reset token expired")
-            return {"message": "Token has expired"}, 400
-        except jwt.InvalidTokenError:
-            logger.warning("Invalid password reset token")
-            return {"message": "Invalid token"}, 400
+            token = jwt.encode({
+                'identity': user.id,
+                'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=1)
+            }, app.config['SECRET_KEY'], algorithm='HS256')
 
-        user = User.query.get(user_id)
-        if not user:
-            logger.warning(f"Password reset attempt for non-existent user ID: {user_id}")
-            return {"message": "User not found"}, 404
+            # Generate refresh token
+            refresh_token = jwt.encode({
+                'identity': user.id,
+                'exp': datetime.datetime.utcnow() + datetime.timedelta(days=30)
+            }, app.config['SECRET_KEY'], algorithm='HS256')
+        except Exception as e:
+            logger.error(f"Error generating tokens: {e}", exc_info=True)
+            return {"msg": "An error occurred while generating tokens"}, 500
 
-        user.password = new_password
-        db.session.commit()
-
-        logger.info(f"Password reset successfully for user ID: {user_id}")
-        return {"message": "Password reset successfully"}, 200
+        logger.info(f'Successful login for email: {email}')
+        return {"token": token, "refresh_token": refresh_token}, 200
 
 class Users(Resource):
     def get(self):
@@ -270,10 +232,9 @@ class Parcels(Resource):
 
     def post(self):
         new_parcel = Parcel(
-            name=request.json.get("name"),
             description=request.json.get("description"),
             weight=request.json.get("weight"),
-            price=request.json.get("price"),
+            dimensions=request.json.get("dimensions"),
             order_id=request.json.get("order_id")
         )
         db.session.add(new_parcel)
@@ -289,9 +250,9 @@ class Profiles(Resource):
 
     def post(self):
         new_profile = Profile(
+            user_id=request.json.get("user_id"),
             bio=request.json.get("bio"),
-            profile_pic=request.json.get("profile_pic"),
-            user_id=request.json.get("user_id")
+            profile_picture=request.json.get("profile_picture")
         )
         db.session.add(new_profile)
         db.session.commit()
@@ -301,8 +262,6 @@ class Profiles(Resource):
 # Add Resources to API
 api.add_resource(Signup, '/signup')
 api.add_resource(Login, '/login')
-api.add_resource(Logout, '/logout')
-api.add_resource(PasswordReset, '/password-reset')
 api.add_resource(Users, '/users')
 api.add_resource(UserByID, '/users/<int:id>')
 api.add_resource(Orders, '/orders')
