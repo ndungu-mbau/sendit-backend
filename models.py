@@ -1,12 +1,8 @@
 from flask_login import UserMixin
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, Float, DateTime
+from sqlalchemy import Column, Integer, String, Text, Float, DateTime, ForeignKey
 from sqlalchemy.orm import relationship, validates
 from sqlalchemy_serializer import SerializerMixin
-from flask_bcrypt import Bcrypt
 from database import db
-
-# Initialize Bcrypt for password hashing
-bcrypt = Bcrypt()
 
 class User(db.Model, UserMixin, SerializerMixin):
     __tablename__ = 'users'
@@ -21,11 +17,16 @@ class User(db.Model, UserMixin, SerializerMixin):
     parcels = relationship('Parcel', backref='user', lazy=True)
     profiles = relationship('Profile', backref='user', lazy=True)
 
-    def __init__(self, username, email, password, role='user'):
-        self.username = username
+    def __init__(self, email, username, role, password):
+        from app import bcrypt
         self.email = email
-        self.password = bcrypt.generate_password_hash(password).decode('utf-8')
+        self.username = username
         self.role = role
+        self.password = bcrypt.generate_password_hash(password).decode('utf-8')
+
+    def check_password(self, password):
+        from app import bcrypt
+        return bcrypt.check_password_hash(self.password, password)
 
     @validates('email')
     def validate_email(self, key, email):
@@ -43,6 +44,9 @@ class User(db.Model, UserMixin, SerializerMixin):
             'role': self.role
         }
 
+    def __repr__(self):
+        return f"<User(id={self.id}, username={self.username}, email={self.email})>"
+
 class Order(db.Model, SerializerMixin):
     __tablename__ = 'orders'
     serialize_rules = ('-user.orders', '-feedback.order',)
@@ -53,6 +57,9 @@ class Order(db.Model, SerializerMixin):
     status = Column(String(50), default='pending')
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
     feedback = relationship('Feedback', backref='order', lazy=True)
+
+    def __repr__(self):
+        return f"<Order(order_id={self.order_id}, pickup_address={self.pickup_address})>"
 
 class Parcel(db.Model, SerializerMixin):
     __tablename__ = 'parcels'
@@ -66,6 +73,9 @@ class Parcel(db.Model, SerializerMixin):
     price = Column(Float, nullable=True)
     description = Column(String)
 
+    def __repr__(self):
+        return f"<Parcel(id={self.id}, pickup_location={self.pickup_location}, destination={self.destination})>"
+
 class Profile(db.Model, SerializerMixin):
     __tablename__ = 'profiles'
     serialize_rules = ('-user.profiles',)
@@ -76,6 +86,9 @@ class Profile(db.Model, SerializerMixin):
     created_at = Column(DateTime, default=db.func.now())
     user_id = Column(Integer, ForeignKey('users.id'))
 
+    def __repr__(self):
+        return f"<Profile(id={self.id}, location={self.location})>"
+
 class Feedback(db.Model, SerializerMixin):
     __tablename__ = 'feedback'
     serialize_rules = ('-order.feedback',)
@@ -84,3 +97,6 @@ class Feedback(db.Model, SerializerMixin):
     rating = Column(Integer, nullable=False)
     comment = Column(Text, nullable=False)
     order_id = Column(Integer, ForeignKey('orders.order_id'), nullable=False)
+
+    def __repr__(self):
+        return f"<Feedback(id={self.id}, rating={self.rating})>"

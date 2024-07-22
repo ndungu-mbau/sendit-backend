@@ -1,275 +1,230 @@
-import logging
+from flask import Flask, jsonify, request, session, render_template
+from flask_restful import Api, Resource
+from flask_migrate import Migrate
+from flask_cors import CORS
+from werkzeug.exceptions import NotFound
+from models import db, User, Order, Parcel, Profile, Feedback
+from flask_bcrypt import Bcrypt
 import datetime
 import jwt
-from flask import Flask, make_response, request, jsonify
-from flask_migrate import Migrate
-from flask_restful import Api, Resource, reqparse
-from flask_bcrypt import Bcrypt
-from database import db
-from models import User, Order, Feedback, Parcel, Profile
+import os
+from dotenv import load_dotenv
 
-# Configure Flask application
-app = Flask(__name__, instance_relative_config=True)
+load_dotenv()
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
+app = Flask(__name__, 
+    static_url_path='', 
+    static_folder='../client/build', 
+    template_folder='../client/build')
+
+# Check for DATABASE_URI and SECRET_KEY
+if not os.getenv('DATABASE_URI'):
+    raise ValueError("DATABASE_URI not set in .env file")
+if not os.getenv('SECRET_KEY'):
+    raise ValueError("SECRET_KEY not set in .env file")
+
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URI')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = '9d970c5fb1d04ea380828d9c491448ce'
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
+app.config['SESSION_TYPE'] = 'filesystem'
 
-# Initialize Flask extensions
 db.init_app(app)
-migrate = Migrate(app, db)
-api = Api(app)
 bcrypt = Bcrypt(app)
+migrate = Migrate(app, db)
+CORS(app, supports_credentials=True)
 
-# Configure logging
-logging.basicConfig(level=logging.DEBUG, 
-                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
-
-# Error Handling
-@app.errorhandler(400)
-def bad_request(error):
-    return make_response(jsonify({'message': 'Bad Request', 'details': str(error)}), 400)
+api = Api(app)
 
 @app.errorhandler(404)
-def not_found(error):
-    return make_response(jsonify({'message': 'Not Found', 'details': str(error)}), 404)
+def not_found(e):
+    return render_template("index.html")
 
-@app.errorhandler(500)
-def internal_error(error):
-    return make_response(jsonify({'message': 'Internal Server Error', 'details': str(error)}), 500)
+@app.errorhandler(NotFound)
+def handle_not_found(e):
+    return jsonify({"error": "Not Found", "message": "The requested resource does not exist."}), 404
 
-@app.route('/')
-def index():
-    return "<h1>Welcome to Sendit App</h1>"
+class Index(Resource):
+    def get(self):
+        return {"index": "Welcome to Sendit"}
 
-# Parsers
-register_args = reqparse.RequestParser()
-register_args.add_argument('email', type=str, required=True, help='Email address is required')
-register_args.add_argument('password', type=str, required=True, help='Password is required')
-register_args.add_argument('username', type=str, required=True, help='Username is required')
-register_args.add_argument('role', type=str, default='customer', help='Role of the user')
-
-login_args = reqparse.RequestParser()
-login_args.add_argument('email', type=str, required=True, help='Email address is required')
-login_args.add_argument('password', type=str, required=True, help='Password is required')
-
-class Signup(Resource):
+class UserResource(Resource):
     def post(self):
-        data = register_args.parse_args()
-        role = data.get('role', 'customer')
-        hashed_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')  # Hash the password
-        new_user = User(
-            email=data['email'],
-            username=data['username'],
-            role=role,
-            password=hashed_password  # Store the hashed password
-        )
-        try:
-            db.session.add(new_user)
-            db.session.commit()
-            logger.info(f"User created successfully: {data['username']}")
-            return {"msg": 'User created successfully'}, 201
-        except Exception as e:
-            db.session.rollback()
-            logger.error(f"Error creating user: {e}", exc_info=True)
-            return {"msg": "An error occurred while creating the user"}, 500
+        if request.is_json:
+            if request.path.endswith('/login'):
+                return self.login()
+            elif request.path.endswith('/logout'):
+                return self.logout()
+            else:
+                return self.register()
+        else:
+            return {"error": "Invalid JSON format"}, 400
 
-class Login(Resource):
-    def post(self):
-        data = login_args.parse_args()
-        email = data.get('email')
-        password = data.get('password')
+    def register(self):
+        data = request.get_json()
+        username = data.get("username")
+        email = data.get("email")
+        password = data.get("password")
+        role = data.get("role", 'user')  # Default to 'user' if not provided
 
-        # Fetch user from the database
+        if not username or not email or not password:
+            return {"error": "Missing fields"}, 400
+
+        if User.query.filter_by(email=email).first():
+            return {"error": "Email already exists"}, 400
+
+        hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
+        new_user = User(username=username, email=email, role=role, password=hashed_password)
+        db.session.add(new_user)
+        db.session.commit()
+        return {"user": new_user.to_dict()}, 201
+
+    def login(self):
+        data = request.get_json()
+        email = data.get("email")
+        password = data.get("password")
+
         user = User.query.filter_by(email=email).first()
-        
-        if not user:
-            logger.info(f'Login attempt with non-existent email: {email}')
-            return {"msg": "User does not exist in our database"}, 404
-        
-        # Compare the provided password with the stored hashed password
-        if not bcrypt.check_password_hash(user.password, password):
-            logger.info(f'Failed password attempt for email: {email}')
-            return {"msg": "Password is incorrect!"}, 401
-        
-        # Generate JWT token
-        try:
+        if user and bcrypt.check_password_hash(user.password, password):
+            session['user_id'] = user.id
             token = jwt.encode({
                 'identity': user.id,
                 'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=1)
             }, app.config['SECRET_KEY'], algorithm='HS256')
 
-            # Generate refresh token
             refresh_token = jwt.encode({
                 'identity': user.id,
                 'exp': datetime.datetime.utcnow() + datetime.timedelta(days=30)
             }, app.config['SECRET_KEY'], algorithm='HS256')
-        except Exception as e:
-            logger.error(f"Error generating tokens: {e}", exc_info=True)
-            return {"msg": "An error occurred while generating tokens"}, 500
 
-        logger.info(f'Successful login for email: {email}')
-        return {"token": token, "refresh_token": refresh_token}, 200
+            return {"token": token, "refresh_token": refresh_token}, 200
 
-class Users(Resource):
-    def get(self):
-        users = User.query.all()
-        users_list = [user.to_dict() for user in users]
-        return make_response(jsonify({"count": len(users_list), "users": users_list}), 200)
+        return {"error": "Invalid credentials"}, 401
 
+    def logout(self):
+        session.pop('user_id', None)
+        return {"message": "Logged out successfully"}, 200
+
+class OrderResource(Resource):
     def post(self):
-        new_user = User(
-            username=request.json.get("username"),
-            email=request.json.get("email"),
-            password=request.json.get("password"),
-            role=request.json.get("role")
-        )
-        db.session.add(new_user)
-        db.session.commit()
-        logger.info(f"New user created: {new_user.username}")
-        return make_response(jsonify(new_user.to_dict()), 201)
-
-class UserByID(Resource):
-    def get(self, id):
-        user = User.query.get(id)
-        if user is None:
-            logger.warning(f"User not found with ID: {id}")
-            return make_response(jsonify({"message": "User not found"}), 404)
-        return make_response(jsonify(user.to_dict()), 200)
-
-    def patch(self, id):
-        user = User.query.get(id)
-        if user is None:
-            logger.warning(f"User not found for update with ID: {id}")
-            return make_response(jsonify({"message": "User not found"}), 404)
-        for attr in request.json:
-            setattr(user, attr, request.json.get(attr))
-        db.session.commit()
-        logger.info(f"User updated successfully with ID: {id}")
-        return make_response(jsonify(user.to_dict()), 200)
-
-    def delete(self, id):
-        user = User.query.get(id)
-        if user is None:
-            logger.warning(f"User not found for deletion with ID: {id}")
-            return make_response(jsonify({"message": "User not found"}), 404)
-        db.session.delete(user)
-        db.session.commit()
-        logger.info(f"User deleted successfully with ID: {id}")
-        return make_response(jsonify({"message": "User deleted"}), 200)
-
-class Orders(Resource):
-    def get(self):
-        orders = Order.query.all()
-        orders_list = [order.to_dict() for order in orders]
-        return make_response(jsonify({"count": len(orders_list), "orders": orders_list}), 200)
-
-    def post(self):
+        data = request.get_json()
         new_order = Order(
-            pickup_address=request.json.get("pickup_address"),
-            delivery_address=request.json.get("delivery_address"),
-            status=request.json.get("status"),
-            user_id=request.json.get("user_id")
+            user_id=data['user_id'],
+            parcel_id=data['parcel_id'],
+            origin=data['origin'],
+            destination=data['destination'],
+            status=data.get('status', 'pending')
         )
         db.session.add(new_order)
         db.session.commit()
-        logger.info(f"New order created with ID: {new_order.id}")
-        return make_response(jsonify(new_order.to_dict()), 201)
+        return {"message": "Order created", "order": new_order.to_dict()}, 201
 
-class OrderByID(Resource):
-    def get(self, id):
-        order = Order.query.get(id)
-        if order is None:
-            logger.warning(f"Order not found with ID: {id}")
-            return make_response(jsonify({"message": "Order not found"}), 404)
-        return make_response(jsonify(order.to_dict()), 200)
+    def get(self, order_id=None):
+        if order_id:
+            order = Order.query.get(order_id)
+            if order:
+                return {"order": order.to_dict()}
+            return {"error": "Order not found"}, 404
+        
+        orders = Order.query.all()
+        return {"orders": [order.to_dict() for order in orders]}
 
-    def patch(self, id):
-        order = Order.query.get(id)
-        if order is None:
-            logger.warning(f"Order not found for update with ID: {id}")
-            return make_response(jsonify({"message": "Order not found"}), 404)
-        for attr in request.json:
-            setattr(order, attr, request.json.get(attr))
+    def patch(self, order_id):
+        order = Order.query.get(order_id)
+        if not order:
+            return {"error": "Order not found"}, 404
+        data = request.get_json()
+        if 'status' in data:
+            order.status = data['status']
         db.session.commit()
-        logger.info(f"Order updated successfully with ID: {id}")
-        return make_response(jsonify(order.to_dict()), 200)
+        return {"message": "Order updated", "order": order.to_dict()}, 200
 
-    def delete(self, id):
-        order = Order.query.get(id)
-        if order is None:
-            logger.warning(f"Order not found for deletion with ID: {id}")
-            return make_response(jsonify({"message": "Order not found"}), 404)
+    def delete(self, order_id):
+        order = Order.query.get(order_id)
+        if not order:
+            return {"error": "Order not found"}, 404
         db.session.delete(order)
         db.session.commit()
-        logger.info(f"Order deleted successfully with ID: {id}")
-        return make_response(jsonify({"message": "Order deleted"}), 200)
+        return {"message": "Order successfully deleted"}, 200
 
-class FeedbackResource(Resource):
-    def get(self):
-        feedbacks = Feedback.query.all()
-        feedbacks_list = [feedback.to_dict() for feedback in feedbacks]
-        return make_response(jsonify({"count": len(feedbacks_list), "feedbacks": feedbacks_list}), 200)
-
+class ParcelResource(Resource):
     def post(self):
-        new_feedback = Feedback(
-            rating=request.json.get("rating"),
-            comments=request.json.get("comments"),
-            user_id=request.json.get("user_id")
-        )
-        db.session.add(new_feedback)
-        db.session.commit()
-        logger.info(f"New feedback created with ID: {new_feedback.id}")
-        return make_response(jsonify(new_feedback.to_dict()), 201)
-
-class Parcels(Resource):
-    def get(self):
-        parcels = Parcel.query.all()
-        parcels_list = [parcel.to_dict() for parcel in parcels]
-        return make_response(jsonify({"count": len(parcels_list), "parcels": parcels_list}), 200)
-
-    def post(self):
+        data = request.get_json()
         new_parcel = Parcel(
-            description=request.json.get("description"),
-            weight=request.json.get("weight"),
-            dimensions=request.json.get("dimensions"),
-            order_id=request.json.get("order_id")
+            weight=data['weight'],
+            dimensions=data['dimensions'],
+            description=data['description']
         )
         db.session.add(new_parcel)
         db.session.commit()
-        logger.info(f"New parcel created with ID: {new_parcel.id}")
-        return make_response(jsonify(new_parcel.to_dict()), 201)
+        return {"message": "Parcel created", "parcel": new_parcel.to_dict()}, 201
 
-class Profiles(Resource):
     def get(self):
-        profiles = Profile.query.all()
-        profiles_list = [profile.to_dict() for profile in profiles]
-        return make_response(jsonify({"count": len(profiles_list), "profiles": profiles_list}), 200)
+        parcels = Parcel.query.all()
+        return {"parcels": [parcel.to_dict() for parcel in parcels]}
 
-    def post(self):
-        new_profile = Profile(
-            user_id=request.json.get("user_id"),
-            bio=request.json.get("bio"),
-            profile_picture=request.json.get("profile_picture")
-        )
-        db.session.add(new_profile)
+    def patch(self, parcel_id):
+        parcel = Parcel.query.get(parcel_id)
+        if not parcel:
+            return {"error": "Parcel not found"}, 404
+        data = request.get_json()
+        if 'weight' in data:
+            parcel.weight = data['weight']
+        if 'dimensions' in data:
+            parcel.dimensions = data['dimensions']
+        if 'description' in data:
+            parcel.description = data['description']
         db.session.commit()
-        logger.info(f"New profile created with ID: {new_profile.id}")
-        return make_response(jsonify(new_profile.to_dict()), 201)
+        return {"message": "Parcel updated", "parcel": parcel.to_dict()}, 200
 
-# Add Resources to API
-api.add_resource(Signup, '/signup')
-api.add_resource(Login, '/login')
-api.add_resource(Users, '/users')
-api.add_resource(UserByID, '/users/<int:id>')
-api.add_resource(Orders, '/orders')
-api.add_resource(OrderByID, '/orders/<int:id>')
-api.add_resource(FeedbackResource, '/feedback')
-api.add_resource(Parcels, '/parcels')
-api.add_resource(Profiles, '/profiles')
+    def delete(self, parcel_id):
+        parcel = Parcel.query.get(parcel_id)
+        if not parcel:
+            return {"error": "Parcel not found"}, 404
+        db.session.delete(parcel)
+        db.session.commit()
+        return {"message": "Parcel successfully deleted"}, 200
 
-# Run the Flask application
+class ProfileResource(Resource):
+    def get(self, profile_id):
+        profile = Profile.query.get(profile_id)
+        if profile:
+            return {"profile": profile.to_dict()}
+        return {"error": "Profile not found"}, 404
+
+    def patch(self, profile_id):
+        profile = Profile.query.get(profile_id)
+        if not profile:
+            return {"error": "Profile not found"}, 404
+        data = request.get_json()
+        if 'address' in data:
+            profile.address = data['address']
+        if 'phone_number' in data:
+            profile.phone_number = data['phone_number']
+        db.session.commit()
+        return {"message": "Profile updated", "profile": profile.to_dict()}, 200
+
+class FeedbackResource(Resource):
+    def post(self):
+        data = request.get_json()
+        new_feedback = Feedback(
+            user_id=data['user_id'],
+            order_id=data['order_id'],
+            feedback=data['feedback']
+        )
+        db.session.add(new_feedback)
+        db.session.commit()
+        return {"message": "Feedback submitted", "feedback": new_feedback.to_dict()}, 201
+
+    def get(self):
+        feedbacks = Feedback.query.all()
+        return {"feedbacks": [feedback.to_dict() for feedback in feedbacks]}
+
+api.add_resource(Index, '/')
+api.add_resource(UserResource, '/users', '/users/login', '/users/logout', '/users/<int:user_id>')
+api.add_resource(OrderResource, '/orders', '/orders/<int:order_id>')
+api.add_resource(ParcelResource, '/parcels', '/parcels/<int:parcel_id>')
+api.add_resource(ProfileResource, '/profiles/<int:profile_id>')
+api.add_resource(FeedbackResource, '/feedbacks', '/feedbacks/<int:feedback_id>')
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(port=5000, debug=True)
